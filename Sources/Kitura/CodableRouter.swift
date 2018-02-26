@@ -455,7 +455,7 @@ extension Router {
                 let id = request.parameters["id"] ?? ""
                 let identifier = try Id(value: id)
                 let param = try request.read(as: I.self)
-                
+
                 // Define handler to process result from application
                 let resultHandler: CodableResultClosure<O> = { result, error in
                     do {
@@ -761,7 +761,7 @@ extension Router {
         let status: HTTPStatusCode = HTTPStatusCode(rawValue: error.rawValue) ?? .unknown
         return status
     }
-    
+
     internal func join(path base: String, with component: String) -> String {
         let strippedBase = base.hasSuffix("/") ? String(base.dropLast()) : base
         let strippedComponent = component.hasPrefix("/") ? String(component.dropFirst()) : component

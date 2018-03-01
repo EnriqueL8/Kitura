@@ -251,7 +251,7 @@ extension Router {
     fileprivate func postSafely<I: Codable, O: Codable>(_ route: String, handler: @escaping CodableClosure<I, O>) {
         post(route) { request, response, next in
             Log.verbose("Received POST type-safe request")
-            guard self.isContentTypeJson(request) else {
+            guard self.isContentTypeJson(request) || self.isContentTypeURLEncoded(request) else {
                 response.status(.unsupportedMediaType)
                 next()
                 return
@@ -263,9 +263,7 @@ extension Router {
                 return
             }
             do {
-                // Process incoming data from client
-                let param = try request.read(as: I.self)
-
+                let param = self.isContentTypeURLEncoded(request) ? try self.parseURLEncoded(request) : try request.read(as: I.self)
                 // Define handler to process result from application
                 let resultHandler: CodableResultClosure<O> = { result, error in
                     do {
@@ -709,6 +707,23 @@ extension Router {
             return false
         }
         return (contentType.hasPrefix("application/json"))
+    }
+    
+    private func isContentTypeURLEncoded(_ request: RouterRequest) -> Bool {
+        guard let contentType = request.headers["Content-Type"] else {
+            return false
+        }
+        return (contentType.hasPrefix("application/x-www-form-urlencoded"))
+    }
+    
+    private func parseURLEncoded<I: Codable> (_ request: RouterRequest) throws -> I {
+        var bodyData = Data()
+        let _ = try request.read(into: &bodyData)
+        guard let bodyAsString = String(data: bodyData, encoding: .utf8) else {
+            throw(Error.failedToConvertDataToString)
+        }
+        let urlKeyValuePairs = bodyAsString.urlDecodedFieldValuePairs
+        return try QueryDecoder(dictionary: urlKeyValuePairs).decode(I.self)
     }
 
     private func httpStatusCode(from error: RequestError) -> HTTPStatusCode {
